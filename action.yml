@@ -1,0 +1,18 @@
+name: "Remind PR Review"
+description: "Remind pull request review to reviewers periodically"
+inputs:
+  token:
+    description: "github token"
+    required: true
+  slackBotToken:
+    description: "slack bot token for messaging"
+    required: true
+  slackChannel:
+    description: "slack channel to send message"
+    required: true
+  repoUrl:
+    description: "repository url where action runs"
+    required: true
+runs:
+  using: node12
+  main: index.js
