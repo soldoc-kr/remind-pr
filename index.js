@@ -172,10 +172,17 @@ const refineToApiUrl = repoUrl => {
         }
 
         core.info("Starting sending messages...");
+        // 여기서 await로 응답 받고 출력
+        const slackResponse = await sendSlack(createRequestPRData(channel));
+        core.info(`Slack API response: ${JSON.stringify(slackResponse.data)}`);
+
+        // 만약 ok가 false면 에러 처리
+        if (!slackResponse.data.ok) {
+            core.setFailed(`Slack API error: ${slackResponse.data.error}`);
+        }
 
         core.info("Messages sent successfully");
-
-        return sendSlack(createRequestPRData(channel));
+        
 
     } catch (e) {
         core.setFailed(e.message);
