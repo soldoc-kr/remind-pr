@@ -18,42 +18,46 @@ const authFetch = url => axios({
     },
     url
 }).then(res => res.data);
-const createRequestPRData = (channel) => ({
-    text: "좋은 아침이에요 :wave:",
-    blocks: [
-        {
-            type: "section",
-            text: {
-                type: "mrkdwn",
-                text: "👋 좋은 아침입니다"
-            }
-        },
-        {
-            type: "section",
-            text: {
-                type: "mrkdwn",
-                text: `🙏 @here 리뷰를 애타게 기다리는 동료의 PR이 있어요. 리뷰에 참여해 주세요:`
-            }
-        },
-        {
-            type: "section",
-            text: {
-                type: "mrkdwn",
-                text: channel.requestedPRs
-                    .map(({title, url, labels}) => {
-                        let text = `• <${url}|${encodeText(title)}>`;
+const createRequestPRData = (channel) => {
+    const prText = channel.requestedPRs.length > 0
+        ? channel.requestedPRs
+            .map(({ title, url, labels }) => {
+                let text = `• <${url}|${encodeText(title)}>`;
+                if (labels.some(({ name }) => name === D0)) {
+                    text += `\n\t• ☝️PR은 \`${D0}\` PR로 매우 긴급한 PR입니다. 🚨 지금 바로 리뷰에 참여해 주세요.`;
+                }
+                return text;
+            })
+            .join("\n")
+        : "현재 리뷰 대기 중인 PR이 없습니다. 👌";
 
-                        if (labels.some(({name}) => name === D0)) {
-                            text += `\n\t• ☝️PR은 \`${D0}\` PR로 매우 긴급한 PR입니다. 🚨 지금 바로 리뷰에 참여해 주세요.`
-                        }
-
-                        return text;
-                    })
-                    .join("\n")
+    return {
+        text: "좋은 아침이에요 :wave:",
+        blocks: [
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: "👋 좋은 아침입니다"
+                }
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: `🙏 @here 리뷰를 애타게 기다리는 동료의 PR이 있어요. 리뷰에 참여해 주세요:`
+                }
+            },
+            {
+                type: "section",
+                text: {
+                    type: "mrkdwn",
+                    text: prText  // 여기서 빈 문자열 방지
+                }
             }
-        }
-    ]
-});
+        ]
+    };
+};
 /**
  * @param {object} data
  */
