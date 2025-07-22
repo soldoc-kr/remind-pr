@@ -19,17 +19,19 @@ const authFetch = url => axios({
     url
 }).then(res => res.data);
 const createRequestPRData = (channel) => {
-    const prText = channel.requestedPRs.length > 0
-        ? channel.requestedPRs
-            .map(({ title, url, labels }) => {
-                let text = `• <${url}|${encodeText(title)}>`;
-                if (labels.some(({ name }) => name === D0)) {
-                    text += `\n\t• ☝️PR은 \`${D0}\` PR로 매우 긴급한 PR입니다. 🚨 지금 바로 리뷰에 참여해 주세요.`;
-                }
-                return text;
-            })
-            .join("\n")
-        : "현재 리뷰 대기 중인 PR이 없습니다. 👌";
+    if (channel.requestedPRs.length === 0) {
+        return null;  // PR이 없으면 메시지 자체를 생성하지 않음
+    }
+
+    const prText = channel.requestedPRs
+        .map(({ title, url, labels }) => {
+            let text = `• <${url}|${encodeText(title)}>`;
+            if (labels.some(({ name }) => name === D0)) {
+                text += `\n\t• ☝️PR은 \`${D0}\` PR로 매우 긴급한 PR입니다. 🚨 지금 바로 리뷰에 참여해 주세요.`;
+            }
+            return text;
+        })
+        .join("\n");
 
     return {
         text: "좋은 아침이에요 :wave:",
@@ -52,7 +54,7 @@ const createRequestPRData = (channel) => {
                 type: "section",
                 text: {
                     type: "mrkdwn",
-                    text: prText  // 여기서 빈 문자열 방지
+                    text: prText
                 }
             }
         ]
@@ -170,23 +172,30 @@ const refineToApiUrl = repoUrl => {
         for (const pullInfo of await fetchPulls()) {
             const pull = Pull.create(pullInfo);   
             core.info(`Fetching reviewers of #${pull.number}...`);
-            if(pull.labels.some(({name}) => ["[Feature]","[Bug]"].includes(name))) {
+            if(pull.labels.some(({name}) => 
+                name.toLowerCase().includes("feature") || 
+                name.toLowerCase().includes("bug"))) {
                 channel.requestReview(pull);
             }
         }
+        
+        
+        const messageData = createRequestPRData(channel);
 
-        core.info("Starting sending messages...");
-        // 여기서 await로 응답 받고 출력
-        const slackResponse = await sendSlack(createRequestPRData(channel));
-        core.info(`Slack API response: ${JSON.stringify(slackResponse.data)}`);
+        if (messageData) {
+            core.info("Starting sending messages...");
+            const slackResponse = await sendSlack(messageData);
+            core.info(`Slack API response: ${JSON.stringify(slackResponse.data)}`);
 
-        // 만약 ok가 false면 에러 처리
-        if (!slackResponse.data.ok) {
-            core.setFailed(`Slack API error: ${slackResponse.data.error}`);
+            if (!slackResponse.data.ok) {
+                core.setFailed(`Slack API error: ${slackResponse.data.error}`);
+            } else {
+                core.info("Slack message sent successfully");
+            }
+        } else {
+            core.info("대기 중인 PR이 없어서 슬랙 메시지를 보내지 않았습니다.");
         }
 
-        core.info("Messages sent successfully");
-        
 
     } catch (e) {
         core.setFailed(e.message);
